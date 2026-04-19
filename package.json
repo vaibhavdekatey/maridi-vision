@@ -1,0 +1,60 @@
+{
+  "name": "maridi-vision",
+  "version": "1.0.0",
+  "description": "Maridi Vision Operator Panel — GP180 Bag Detection",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "TEST_MODE=1 electron .",
+    "build": "electron-builder --linux deb --arm64",
+    "build:x64": "electron-builder --linux deb --x64"
+  },
+  "author": {
+    "name": "N K Engineering",
+    "email": "support@nke.org"
+  },
+  "homepage": "https://www.nkeorg.com",
+  "build": {
+    "appId": "com.maridi.vision",
+    "productName": "Maridi Vision",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "**/*",
+      "!dist/**",
+      "!node_modules/.cache/**",
+      "!*.md"
+    ],
+    "extraResources": [
+      {
+        "from": "scripts/",
+        "to": "scripts/"
+      }
+    ],
+    "linux": {
+      "target": [
+        {
+          "target": "deb",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "category": "Utility",
+      "executableName": "maridi-vision"
+    },
+    "deb": {
+      "packageName": "maridi-vision",
+      "depends": [
+        "python3",
+        "python3-opencv",
+        "ros-humble-cv-bridge"
+      ]
+    }
+  },
+  "devDependencies": {
+    "electron": "^41.2.1",
+    "electron-builder": "^26.8.1"
+  }
+}

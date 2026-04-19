@@ -1,0 +1,475 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Maridi Vision</title>
+    <style>
+      *,
+      *::before,
+      *::after {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      :root {
+        --bg: #0d0d0d;
+        --panel: #141414;
+        --border: rgba(255, 255, 255, 0.08);
+        --text: #e8e8e8;
+        --muted: rgba(255, 255, 255, 0.35);
+        --accent: #3b6d11;
+      }
+
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: var(--bg);
+        font-family: -apple-system, "Segoe UI", sans-serif;
+        color: var(--text);
+        user-select: none;
+      }
+
+      /* ── Layout ─────────────────────────────────────── */
+      .root {
+        display: flex;
+        width: 100vw;
+        height: 100vh;
+      }
+
+      /* ── Viewer ─────────────────────────────────────── */
+      .viewer {
+        position: relative;
+        flex: 1;
+        background: #050505;
+        overflow: hidden;
+      }
+
+      #feed {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: none;
+      }
+
+      .v-placeholder {
+        position: absolute;
+        inset: 0;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+      }
+      .v-placeholder svg {
+        opacity: 0.18;
+      }
+      .v-placeholder-text {
+        font-size: 12px;
+        color: var(--muted);
+        letter-spacing: 0.05em;
+      }
+
+      .crosshair-h {
+        position: absolute;
+        left: 0;
+        right: 0;
+        top: 50%;
+        height: 1px;
+        background: rgba(255, 255, 255, 0.08);
+        pointer-events: none;
+      }
+      .crosshair-v {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 50%;
+        width: 1px;
+        background: rgba(255, 255, 255, 0.08);
+        pointer-events: none;
+      }
+      .center-dot {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        pointer-events: none;
+      }
+
+      /* ── Control panel ──────────────────────────────── */
+      .panel {
+        width: 200px;
+        flex-shrink: 0;
+        display: flex;
+        flex-direction: column;
+        background: var(--panel);
+        border-left: 1px solid var(--border);
+      }
+
+      /* Titlebar / drag region */
+      .titlebar {
+        -webkit-app-region: drag;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 10px 12px 8px;
+        border-bottom: 1px solid var(--border);
+      }
+      .brand {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+      }
+      .brand-name {
+        font-size: 12px;
+        font-weight: 600;
+        color: var(--text);
+        letter-spacing: 0.01em;
+      }
+      .brand-sub {
+        font-size: 9px;
+        color: var(--muted);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+
+      .win-close {
+        -webkit-app-region: no-drag;
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background: #444;
+        border: none;
+        cursor: pointer;
+        transition: background 0.15s;
+        flex-shrink: 0;
+      }
+      .win-close:hover {
+        background: #c0392b;
+      }
+
+      /* Status */
+      .status-row {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 9px 14px;
+        border-bottom: 1px solid var(--border);
+      }
+      .dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        transition: background 0.3s;
+      }
+      .dot-idle {
+        background: rgba(255, 255, 255, 0.2);
+      }
+      .dot-ok {
+        background: #639922;
+      }
+      .dot-ok.pulse {
+        animation: pulse 2s infinite;
+      }
+      .dot-warn {
+        background: #ba7517;
+      }
+      .dot-err {
+        background: #e24b4a;
+      }
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        55% {
+          opacity: 0.3;
+        }
+      }
+
+      #status-text {
+        font-size: 11px;
+        color: var(--muted);
+      }
+
+      /* Buttons */
+      .btn-group {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        gap: 10px;
+        padding: 20px 16px;
+      }
+
+      .op-btn {
+        width: 100%;
+        padding: 13px 0;
+        font-size: 13px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+        transition:
+          filter 0.12s,
+          transform 0.08s;
+      }
+      .op-btn:hover:not(:disabled) {
+        filter: brightness(1.12);
+      }
+      .op-btn:active:not(:disabled) {
+        transform: scale(0.97);
+      }
+      .op-btn:disabled {
+        opacity: 0.25;
+        cursor: not-allowed;
+        transform: none;
+        filter: none;
+      }
+
+      .btn-launch {
+        background: #27500a;
+        color: #c0dd97;
+      }
+      .btn-reset {
+        background: #0c447c;
+        color: #b5d4f4;
+      }
+      .btn-stop {
+        background: #791f1f;
+        color: #f7c1c1;
+      }
+
+      /* Footer */
+      .footer {
+        padding: 10px 14px 12px;
+        border-top: 1px solid var(--border);
+      }
+      .footer-label {
+        font-size: 9px;
+        color: rgba(255, 255, 255, 0.2);
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        margin-bottom: 5px;
+      }
+      .stage-dots {
+        display: flex;
+        gap: 6px;
+      }
+      .sdot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.1);
+        transition: background 0.4s;
+      }
+      .sdot.active {
+        background: #639922;
+      }
+      .sdot.pending {
+        background: #ba7517;
+        animation: pulse 1.2s infinite;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="root">
+      <!-- ── Viewer ──────────────────────────────────── -->
+      <div class="viewer" id="viewer">
+        <img id="feed" alt="camera feed" />
+        <div class="v-placeholder" id="placeholder">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+            <rect
+              x="2"
+              y="6"
+              width="20"
+              height="14"
+              rx="2"
+              stroke="white"
+              stroke-width="1.2"
+            />
+            <circle cx="12" cy="13" r="3.5" stroke="white" stroke-width="1.2" />
+            <path
+              d="M8 6V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v1"
+              stroke="white"
+              stroke-width="1.2"
+            />
+          </svg>
+          <span class="v-placeholder-text" id="placeholder-text">no feed</span>
+        </div>
+        <div class="crosshair-h"></div>
+        <div class="crosshair-v"></div>
+        <div class="center-dot"></div>
+      </div>
+
+      <!-- ── Control Panel ───────────────────────────── -->
+      <div class="panel">
+        <div class="titlebar">
+          <div class="brand">
+            <span class="brand-name">Maridi Vision</span>
+            <span class="brand-sub">GP180 · Bag Detection</span>
+          </div>
+          <button class="win-close" id="btn-close" title="Close"></button>
+        </div>
+
+        <div class="status-row">
+          <div class="dot dot-idle" id="dot"></div>
+          <span id="status-text">Idle</span>
+        </div>
+
+        <div class="btn-group">
+          <button class="op-btn btn-launch" id="btn-launch">Launch</button>
+          <button class="op-btn btn-reset" id="btn-reset" disabled>
+            Reset
+          </button>
+          <button class="op-btn btn-stop" id="btn-stop" disabled>Stop</button>
+        </div>
+
+        <div class="footer">
+          <div class="footer-label">Startup progress</div>
+          <div class="stage-dots">
+            <div class="sdot" id="sd0"></div>
+            <div class="sdot" id="sd1"></div>
+            <div class="sdot" id="sd2"></div>
+            <div class="sdot" id="sd3"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const el = (id) => document.getElementById(id);
+      const feed = el("feed");
+
+      // ── Feed / MJPEG ──────────────────────────────────────────────────────────
+      let feedActive = false;
+      let feedRetryTimer = null;
+
+      function startFeed() {
+        clearTimeout(feedRetryTimer);
+        feed.src = "http://127.0.0.1:8765";
+        feed.style.display = "block";
+        el("placeholder").style.display = "none";
+        feedActive = true;
+      }
+
+      function stopFeed() {
+        clearTimeout(feedRetryTimer);
+        feed.src = "";
+        feed.style.display = "none";
+        el("placeholder").style.display = "flex";
+        el("placeholder-text").textContent = "no feed";
+        feedActive = false;
+      }
+
+      feed.onerror = () => {
+        if (!feedActive) return;
+        feed.style.display = "none";
+        el("placeholder").style.display = "flex";
+        el("placeholder-text").textContent = "reconnecting…";
+        feedRetryTimer = setTimeout(startFeed, 2000);
+      };
+
+      // ── Status machine ─────────────────────────────────────────────────────────
+      const STATES = {
+        idle: {
+          dot: "dot-idle",
+          text: "Idle",
+          stages: [0, 0, 0, 0],
+          launch: true,
+          reset: false,
+          stop: false,
+        },
+        "cam-starting": {
+          dot: "dot-warn pulse",
+          text: "Starting camera…",
+          stages: [1, 0, 0, 0],
+          launch: false,
+          reset: false,
+          stop: false,
+        },
+        "node-starting": {
+          dot: "dot-warn pulse",
+          text: "Initialising nodes…",
+          stages: [2, 2, 0, 0],
+          launch: false,
+          reset: false,
+          stop: false,
+        },
+        running: {
+          dot: "dot-ok pulse",
+          text: "Running",
+          stages: [2, 2, 2, 2],
+          launch: false,
+          reset: true,
+          stop: true,
+        },
+        resetting: {
+          dot: "dot-warn pulse",
+          text: "Resetting…",
+          stages: [1, 0, 0, 0],
+          launch: false,
+          reset: false,
+          stop: false,
+        },
+        stopping: {
+          dot: "dot-err",
+          text: "Stopping…",
+          stages: [0, 0, 0, 0],
+          launch: false,
+          reset: false,
+          stop: false,
+        },
+      };
+
+      function applyState(key) {
+        const s = STATES[key] || STATES["idle"];
+
+        const dot = el("dot");
+        dot.className = "dot " + s.dot;
+
+        el("status-text").textContent = s.text;
+        el("btn-launch").disabled = !s.launch;
+        el("btn-reset").disabled = !s.reset;
+        el("btn-stop").disabled = !s.stop;
+
+        // Stage dots: 0=off, 1=pending, 2=active
+        s.stages.forEach((v, i) => {
+          const d = el("sd" + i);
+          d.className =
+            "sdot" + (v === 2 ? " active" : v === 1 ? " pending" : "");
+        });
+
+        if (key === "running") startFeed();
+        if (key === "idle" || key === "stopping") stopFeed();
+      }
+
+      window.maridi.onStatus(applyState);
+
+      // ── Button handlers ───────────────────────────────────────────────────────
+      el("btn-launch").addEventListener("click", () => window.maridi.launch());
+      el("btn-reset").addEventListener("click", () => window.maridi.reset());
+      el("btn-stop").addEventListener("click", () => window.maridi.stop());
+      el("btn-close").addEventListener("click", () => window.maridi.stop());
+
+      // Also handle window-close after stop settles
+      const origStop = el("btn-close").onclick;
+      el("btn-close").addEventListener("click", () => {
+        setTimeout(() => {
+          try {
+            window.close();
+          } catch (_) {}
+        }, 100);
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,28 @@
+directories:
+  output: dist
+  buildResources: build
+appId: com.maridi.vision
+productName: Maridi Vision
+files:
+  - filter:
+      - '**/*'
+      - '!dist/**'
+      - '!node_modules/.cache/**'
+      - '!*.md'
+extraResources:
+  - from: scripts/
+    to: scripts/
+linux:
+  target:
+    - target: deb
+      arch:
+        - x64
+  category: Utility
+  executableName: maridi-vision
+deb:
+  packageName: maridi-vision
+  depends:
+    - python3
+    - python3-opencv
+    - ros-humble-cv-bridge
+electronVersion: 41.2.1
